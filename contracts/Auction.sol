@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
@@ -14,6 +13,8 @@ contract BasicDutchAuction {
     uint public highestBid;
     mapping(address => uint) private pendingReturns;
     
+    event Refund(address bidder, uint amount);
+    event RefundWithdrawal(address bidder, uint amount);
 
     constructor(
         uint _reservePrice,
@@ -60,41 +61,36 @@ contract BasicDutchAuction {
         }
     }
 
+    function refund() public {
+        require(auctionEnded, "Auction has not ended.");
+        require(msg.sender != highestBidder, "You cannot refund as the winning bidder.");
 
-function refund() public {
-    require(auctionEnded, "Auction has not ended.");
-    require(msg.sender != highestBidder, "You cannot refund as the winning bidder.");
+        // Retrieve the amount to be refunded
+        uint amount = pendingReturns[msg.sender];
+        require(amount > 0, "No funds to refund.");
 
-    // Retrieve the amount to be refunded
-    uint amount = pendingReturns[msg.sender];
-    require(amount > 0, "No funds to refund.");
+        // Set the pending refund amount to zero
+        pendingReturns[msg.sender] = 0;
 
-    // Set the pending refund amount to zero
-    pendingReturns[msg.sender] = 0;
+        // Emit an event for the refund
+        emit Refund(msg.sender, amount);
+    }
 
-    // Emit an event for the refund
-    emit Refund(msg.sender, amount);
+    function withdrawRefund() public {
+        require(auctionEnded, "Auction has not ended.");
+        require(msg.sender != highestBidder, "Winning bidder cannot withdraw refund.");
+
+        // Retrieve the refund amount for the sender
+        uint refundAmount = pendingReturns[msg.sender];
+        require(refundAmount > 0, "No funds to withdraw.");
+
+        // Set the refund amount to zero before transferring
+        pendingReturns[msg.sender] = 0;
+
+        // Transfer the refund amount to the bidder
+        payable(msg.sender).transfer(refundAmount);
+
+        // Emit an event for the refund withdrawal
+        emit RefundWithdrawal(msg.sender, refundAmount);
+    }
 }
-
-event Refund(address bidder, uint amount);
-function withdrawRefund() public {
-    require(auctionEnded, "Auction has not ended.");
-    require(msg.sender != highestBidder, "Winning bidder cannot withdraw refund.");
-
-    // Retrieve the refund amount for the sender
-    uint refundAmount = pendingReturns[msg.sender];
-    require(refundAmount > 0, "No funds to withdraw.");
-
-    // Set the refund amount to zero before transferring
-    pendingReturns[msg.sender] = 0;
-
-    // Transfer the refund amount to the bidder
-    payable(msg.sender).transfer(refundAmount);
-
-    // Emit an event for the refund withdrawal
-    emit RefundWithdrawal(msg.sender, refundAmount);
-}
-event RefundWithdrawal(address bidder, uint amount);
-
-}
-
